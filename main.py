@@ -6,6 +6,9 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 
 from input import readCategoryUrl
+from crawl import postCrawling
+
+# https://tuoitre.vn/kinh-doanh.htm
 
 user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0'
 edge_driver_path = os.path.join(os.getcwd(), 'msedgedriver.exe')
@@ -20,3 +23,7 @@ print(url)
 
 browser = webdriver.Edge(service=edge_service, options=edge_options)
 browser.get(url)
+
+postCrawling(browser, 10)
+
+browser.close()
