@@ -24,6 +24,6 @@ print(url)
 browser = webdriver.Edge(service=edge_service, options=edge_options)
 browser.get(url)
 
-postCrawling(browser, 10)
+postCrawling(browser, 1)
 
-browser.close()
+# browser.close()
