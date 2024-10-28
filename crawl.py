@@ -18,79 +18,69 @@ def postCrawling(browser, num):
     if not os.path.exists('images'):
         os.makedirs('images')
                     
-    posts = browser.find_elements(By.CLASS_NAME, "box-category-item")
+    # posts = browser.find_elements(By.CLASS_NAME, "box-category-item")
 
-    # print("This is our posts: ", posts)
+    # # print("This is our posts: ", posts)
 
-    cnt = 0
-    for post in posts:
-        if (cnt == num):
-            break 
-        cnt += 1
+    # cnt = 0
+    # for post in posts:
+    #     if (cnt == num):
+    #         break 
+    #     cnt += 1
         
-        link_element = WebDriverWait(post, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'a')))
-        link = link_element.get_attribute("href")
-        
-        if checkLink(link) == False:
-            continue
-        
-        print("\n Link of post: ", link)
+    # link_element = WebDriverWait(post, 10).until(EC.presence_of_element_located((By.TAG_NAME, 'a')))
+    # link = link_element.get_attribute("href")
+    link = "https://tuoitre.vn/chu-doanh-nghiep-lap-bat-chong-nang-noi-gi-ve-viec-hieu-truong-ke-khai-gia-bat-gap-3-lan-20241025142325469.htm"
+    
+    # if checkLink(link) == False:
+    #     continue
+    
+    # print("\n Link of post: ", link)
 
-        postId = getPostId(link)
-        print(postId)
+    postId = getPostId(link)
+    # print(postId)
 
-        actions = ActionChains(browser)
-        actions.key_down(Keys.LEFT_CONTROL).click(link_element).key_up(Keys.LEFT_CONTROL).perform()
+    # actions = ActionChains(browser)
+    # actions.key_down(Keys.LEFT_CONTROL).click(link_element).key_up(Keys.LEFT_CONTROL).perform()
 
-        windows = browser.window_handles
-        browser.switch_to.window(windows[-1])
+    # windows = browser.window_handles
+    # browser.switch_to.window(windows[-1])
+    
+    # currentUrl = browser.current_url
+    # if (checkLink(currentUrl) == False): 
+    #     if (len(windows) == 1):
+    #         browser.back()
         
-        currentUrl = browser.current_url
-        if (checkLink(currentUrl) == False): 
-            if (len(windows) == 1):
-                browser.back()
+    #     else:
+    #         browser.close()
+    #         browser.switch_to.window(windows[0])
             
-            else:
-                browser.close()
-                browser.switch_to.window(windows[0])
-                
-            continue
+    #     continue
 
-        title = getTitle(browser)
-        print("\nPost title: ", title)
+    title = getTitle(browser)
+    print("\nPost title: ", title)
+    
+    content = getContent(browser)
+    print("\nContent: ", content)
+
+    author = getAuthor(browser)
+    print("\nAuthor: ", author)
+
+    date = getDate(browser)
+    print("\nDate: ", date)
+
+    categories = getCategories(browser)
+    print("\nCategories of Post: ", categories)
+    
+    postReacts = getPostReacts(browser)
+    print("\nPost Reactions: ", postReacts)
+    
+    crawlImages(browser, postId)
+    crawlAudio(browser, postId)
         
-        content = getContent(browser)
-        print("\nContent: ", content)
+    crawlComments(browser)
 
-        author = getAuthor(browser)
-        print("\nAuthor: ", author)
-
-        date = getDate(browser)
-        print("\nDate: ", date)
-
-        categories = getCategories(browser)
-        print("\nCategories of Post: ", categories)
-        
-        postReacts = getPostReacts(browser)
-        print("\nPost Reactions: ", postReacts)
-        
-        crawlImages(browser, postId)
-        crawlAudio(browser, postId)
-        
-        try:
-            # Attempt to find the element
-            showAllCommentsElement = WebDriverWait(browser, 10).until(EC.presence_of_element_located((By.CLASS_NAME, 'commentpopupall')))
-            actions = ActionChains(browser)
-            actions.click(showAllCommentsElement).perform()
-            print("\nShowAllComments Button Clicked!!")
-            
-        except TimeoutException:
-            # Handle the exception when the element is not found
-            print("\nShowAllComments Button Not Found, continuing with the program")
-            
-        crawlComments(browser)
-
-        browser.close()
-        browser.switch_to.window(windows[0])
+    # browser.close()
+    # browser.switch_to.window(windows[0])
 
     

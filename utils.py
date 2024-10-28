@@ -5,8 +5,13 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+
+from selenium.webdriver.common.action_chains import ActionChains
+
 from urllib.parse import urlparse
 import requests
+import time
 
 def checkLink(link: str):
     standardPrefix = "https://tuoitre.vn"
@@ -20,7 +25,7 @@ def getPostId(link: str):
     return postIdList[0]
 
 def getTitle(element):
-    fullTitle = (WebDriverWait(element, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".detail-title.article-title")))).text
+    fullTitle = (WebDriverWait(element, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".detail-title")))).text
     return fullTitle.splitlines()[0]
 
 def getContent(element):
@@ -59,8 +64,8 @@ def crawlImages(element, postId):
     imageElements = WebDriverWait(contentElement, 10).until(EC.presence_of_all_elements_located((By.TAG_NAME, "img")))
         
     imageDirectory = os.path.join("images", postId)
-    if not os.path.exists('images'):
-        os.makedirs('images')
+    if not os.path.exists(imageDirectory):
+        os.makedirs(imageDirectory)
         
     for img in imageElements:
         src = img.get_attribute('src')
@@ -84,8 +89,95 @@ def crawlAudio(element, postId):
     print("\nAudio file downloaded successfully!")
     
 def crawlComments(element):
-    listCommentPopUpElement = WebDriverWait(element, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "lstcommentpopup")))
-    commentElements = WebDriverWait(listCommentPopUpElement, 10).until(EC.presence_of_all_elements_located((By.CLASS_NAME, "item-comment")))
-    
-    for commentElement in commentElements:
-        print("\nComment Text:", commentElement.text)
+    try:
+        # Attempt to find the element
+        showAllCommentsElement = WebDriverWait(element, 2).until(EC.visibility_of_element_located((By.CLASS_NAME, 'commentpopupall')))
+        actions = ActionChains(element)
+        actions.click(showAllCommentsElement).perform()
+        print("\nShowAllComments Button Clicked!!")
+        
+    except TimeoutException:
+        # Handle the exception when the element is not found
+        print("\nShowAllComments Button Not Found, continuing with the program")
+        return
+        
+    try:
+        listCommentPopUpElement = WebDriverWait(element, 2).until(EC.presence_of_element_located((By.CLASS_NAME, "lstcommentpopup")))
+        commentElements = WebDriverWait(listCommentPopUpElement, 2).until(EC.presence_of_all_elements_located((By.CLASS_NAME, "item-comment")))
+        commentCnt = len(commentElements)
+        
+        while True:
+            element.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", listCommentPopUpElement)
+            time.sleep(1)  # Wait for lazy loading
+            
+            newCommentCnt = len(listCommentPopUpElement.find_elements(By.CLASS_NAME, "item-comment"))
+            
+            if newCommentCnt == commentCnt:
+                break
+            
+            commentCnt = newCommentCnt
+        
+        commentElements = WebDriverWait(listCommentPopUpElement, 2).until(EC.presence_of_all_elements_located((By.CLASS_NAME, "item-comment")))
+        for commentElement in commentElements:
+            try:
+                moreButton = commentElement.find_element(By.TAG_NAME, 'a')
+                if moreButton.is_displayed():
+                    actions = ActionChains(element)
+                    actions.move_to_element(moreButton).click().perform()
+            except NoSuchElementException:
+                pass
+            
+            commentId = commentElement.get_attribute('data-cmid')
+            author = commentElement.get_attribute('data-replyname')
+            text = WebDriverWait(commentElement, 2).until(EC.presence_of_element_located((By.CLASS_NAME, "contentcomment"))).text
+            
+            dateElement = commentElement.find_element(By.CLASS_NAME, "timeago")
+            date = dateElement.get_attribute("title")
+            
+            reacts = []
+            reactListElement = commentElement.find_element(By.CLASS_NAME, "listreact")
+            reactElements = reactListElement.find_elements(By.CLASS_NAME, "colreact")
+            for reactElement in reactElements:
+                num = element.execute_script("return arguments[0].textContent", reactElement)
+                reacts.append({reactElement.get_attribute("data-recid") : num})
+            
+            
+            print("\nComment Section: ")
+            print("\n\tComment Id: ", commentId)
+            print("\n\tComment author: ", author)
+            print("\n\tComment text: ", text)
+            print("\n\tComment date: ", date)
+            print("\n\tComment reacts: ", reacts)
+            
+            try:
+                viewReplyButton = commentElement.find_element(By.CLASS_NAME, "btn-cm.viewreply")
+                if viewReplyButton.is_displayed():
+                    actions = ActionChains(element)
+                    actions.move_to_element(viewReplyButton).click().perform()
+                
+                    replyElements = WebDriverWait(commentElement, 2).until(EC.presence_of_all_elements_located((By.CLASS_NAME, "item-comment")))
+                    for replyElement in replyElements:
+                        replyId = replyElement.get_attribute("data-cmid")
+                        replyAuthor = replyElement.get_attribute("data-replyname")
+                        replyText = replyElement.find_element(By.CLASS_NAME, "contentcomment").text
+                        
+                        replyDateElement = replyElement.find_element(By.CLASS_NAME, "timeago")
+                        replyDate = replyDateElement.get_attribute("title")
+                        
+                        replyReacts = []
+                        replyReactListElement = replyElement.find_element(By.CLASS_NAME, "listreact")
+                        replyReactElements = replyReactListElement.find_elements(By.CLASS_NAME, "colreact")
+                        for reactElement in replyReactElements:
+                            num = element.execute_script("return arguments[0].textContent", reactElement)
+                            replyReacts.append({reactElement.get_attribute("data-recid") : num})
+                            
+                        print("\n\t\tComment Id: ", replyId)
+                        print("\n\t\tComment author: ", replyAuthor)
+                        print("\n\t\tComment text: ", replyText)
+                        print("\n\t\tComment date: ", replyDate)
+                        print("\n\t\tComment reacts: ", replyReacts)
+                
+            except NoSuchElementException:
+                pass
+    except TimeoutException:
+        print("\nComment not found!")
