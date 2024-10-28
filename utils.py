@@ -37,14 +37,9 @@ def getAuthor(element):
 def getDate(element):
     return (WebDriverWait(element, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "detail-time")))).text
 
-def getCategories(element):
-    categoriesElement = WebDriverWait(element, 10).until(EC.presence_of_all_elements_located((By.CLASS_NAME, "item")))
-    categories = []
-    
-    for category in categoriesElement:
-        categories.append(category.text)
-    
-    return categories
+def getCategory(element):
+    categoryElement = WebDriverWait(element, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "detail-cate")))
+    return categoryElement.text
 
 def getPostReacts(element):
     reactInfoElement = WebDriverWait(element, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "reactinfo")))
@@ -75,31 +70,35 @@ def crawlImages(element, postId):
             imagePath = os.path.join(imageDirectory, imageName)
             with open(imagePath, 'wb') as file:
                 file.write(imageResponse.content)
-            print("\nAudio file downloaded successfully!")
+            # print("\nImage file downloaded successfully!")
 
 def crawlAudio(element, postId):
     audio_element = WebDriverWait(element, 10).until(EC.presence_of_element_located((By.TAG_NAME, "audio")))
     audio_url = audio_element.get_attribute("src")
-    print("\nAudio URL:", audio_url)
+    # print("\nAudio URL:", audio_url)
     
     audioResponse = requests.get(audio_url)
     audioFilePath = os.path.join("audio", postId + ".m4a")
     with open(audioFilePath, "wb") as file:
         file.write(audioResponse.content)
-    print("\nAudio file downloaded successfully!")
+    # print("\nAudio file downloaded successfully!")
+    
+    return audio_url
     
 def crawlComments(element):
+    comments = []
+    
     try:
         # Attempt to find the element
         showAllCommentsElement = WebDriverWait(element, 2).until(EC.visibility_of_element_located((By.CLASS_NAME, 'commentpopupall')))
         actions = ActionChains(element)
         actions.click(showAllCommentsElement).perform()
-        print("\nShowAllComments Button Clicked!!")
+        # print("\nShowAllComments Button Clicked!!")
         
     except TimeoutException:
         # Handle the exception when the element is not found
-        print("\nShowAllComments Button Not Found, continuing with the program")
-        return
+        # print("\nShowAllComments Button Not Found, continuing with the program")
+        return comments
         
     try:
         listCommentPopUpElement = WebDriverWait(element, 2).until(EC.presence_of_element_located((By.CLASS_NAME, "lstcommentpopup")))
@@ -119,6 +118,8 @@ def crawlComments(element):
         
         commentElements = WebDriverWait(listCommentPopUpElement, 2).until(EC.presence_of_all_elements_located((By.CLASS_NAME, "item-comment")))
         for commentElement in commentElements:
+            comment = {}
+            
             try:
                 moreButton = commentElement.find_element(By.TAG_NAME, 'a')
                 if moreButton.is_displayed():
@@ -142,12 +143,19 @@ def crawlComments(element):
                 reacts.append({reactElement.get_attribute("data-recid") : num})
             
             
-            print("\nComment Section: ")
-            print("\n\tComment Id: ", commentId)
-            print("\n\tComment author: ", author)
-            print("\n\tComment text: ", text)
-            print("\n\tComment date: ", date)
-            print("\n\tComment reacts: ", reacts)
+            # print("\nComment Section: ")
+            # print("\n\tComment Id: ", commentId)
+            # print("\n\tComment author: ", author)
+            # print("\n\tComment text: ", text)
+            # print("\n\tComment date: ", date)
+            # print("\n\tComment reacts: ", reacts)
+            
+            comment["id"] = commentId
+            comment["author"] = author
+            comment["text"] = text
+            comment["date"] = date
+            comment["reacts"] = reacts
+            comment["replies"] = []
             
             try:
                 viewReplyButton = commentElement.find_element(By.CLASS_NAME, "btn-cm.viewreply")
@@ -157,6 +165,7 @@ def crawlComments(element):
                 
                     replyElements = WebDriverWait(commentElement, 2).until(EC.presence_of_all_elements_located((By.CLASS_NAME, "item-comment")))
                     for replyElement in replyElements:
+                        reply = {}
                         replyId = replyElement.get_attribute("data-cmid")
                         replyAuthor = replyElement.get_attribute("data-replyname")
                         replyText = replyElement.find_element(By.CLASS_NAME, "contentcomment").text
@@ -171,13 +180,27 @@ def crawlComments(element):
                             num = element.execute_script("return arguments[0].textContent", reactElement)
                             replyReacts.append({reactElement.get_attribute("data-recid") : num})
                             
-                        print("\n\t\tComment Id: ", replyId)
-                        print("\n\t\tComment author: ", replyAuthor)
-                        print("\n\t\tComment text: ", replyText)
-                        print("\n\t\tComment date: ", replyDate)
-                        print("\n\t\tComment reacts: ", replyReacts)
+                        # print("\n\t\tComment Id: ", replyId)
+                        # print("\n\t\tComment author: ", replyAuthor)
+                        # print("\n\t\tComment text: ", replyText)
+                        # print("\n\t\tComment date: ", replyDate)
+                        # print("\n\t\tComment reacts: ", replyReacts)
+
+                        reply["id"] = replyId
+                        reply["author"] = replyAuthor
+                        reply["text"] = replyText
+                        reply["date"] = replyDate
+                        reply["reacts"] = replyReacts
+                        
+                        comment["replies"].append(reply)
+                        
                 
             except NoSuchElementException:
                 pass
+            
+            comments.append(comment)
     except TimeoutException:
-        print("\nComment not found!")
+        # print("\nComment not found!")
+        pass
+    
+    return comments

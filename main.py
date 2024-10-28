@@ -5,12 +5,11 @@ from selenium.webdriver.edge.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 
-from input import readCategoryUrl
+from input import readCategoryUrl, readNumberofPost
 from crawl import postCrawling
 import time
 
 # https://tuoitre.vn/kinh-doanh.htm
-# https://tuoitre.vn/thoi-su.htm
 # https://tuoitre.vn/the-gioi.htm
 # https://tuoitre.vn/giao-duc.htm
 # https://tuoitre.vn/chu-doanh-nghiep-lap-bat-chong-nang-noi-gi-ve-viec-hieu-truong-ke-khai-gia-bat-gap-3-lan-20241025142325469.htm
@@ -23,14 +22,23 @@ edge_options = Options()
 edge_options.add_argument(f'user-agent={user_agent}')
 edge_options.add_experimental_option("detach", True)
 
-url = readCategoryUrl("Input Category URL: ")
-print(url)
+url1 = readCategoryUrl("Input Category URL 1: ")
+url2 = readCategoryUrl("Input Category URL 2: ")
+url3 = readCategoryUrl("Input Category URL 3: ")
+num = readNumberofPost("Input number of posts you want to crawl in each category: ")
+# print(url, num)
 
 browser = webdriver.Edge(service=edge_service, options=edge_options)
-browser.get(url)
+browser.get(url1)
 browser.maximize_window()
 time.sleep(2)
 
-postCrawling(browser, 1)
+postCrawling(browser, num)
 
-# browser.close()
+browser.get(url2)
+postCrawling(browser, num)
+
+browser.get(url3)
+postCrawling(browser, num)
+
+browser.close()
